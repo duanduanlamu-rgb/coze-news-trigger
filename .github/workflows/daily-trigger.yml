@@ -2,9 +2,8 @@ name: Daily Coze News Trigger
 
 on:
   schedule:
-    # 每天北京时间 8:00 触发
-    # 国内版用北京时间，不需要转换UTC
-    - cron: '0 8 * * *'
+    # 每天北京时间 8:00 = UTC 0:00（减8小时）
+    - cron: '0 0 * * *'
   
   # 允许手动运行（用于测试）
   workflow_dispatch:
@@ -17,21 +16,38 @@ jobs:
     - name: Get Current Date
       id: date
       run: |
-        echo "today=$(date +'%m月%d日')" >> $GITHUB_OUTPUT
+        # 使用北京时区获取日期
+        TZ='Asia/Shanghai' date +'%m月%d日' > date.txt
+        echo "today=$(cat date.txt)" >> $GITHUB_OUTPUT
+        echo "📅 当前日期: $(cat date.txt)"
     
     - name: Trigger Coze Workflow
       run: |
-        curl -X POST 'https://api.coze.cn/v1/workflow/stream_run' \
+        response=$(curl -w "\nHTTP_CODE:%{http_code}" -X POST \
+          'https://api.coze.cn/v1/workflow/stream_run' \
           -H 'Authorization: Bearer ${{ secrets.COZE_TOKEN }}' \
           -H 'Content-Type: application/json' \
           -d '{
             "workflow_id": "7572968865026588722",
-            "parameters": {},
-            "mail_ac": "${{ secrets.MAIL_AC }}",
-            "email_pwd": "${{ secrets.EMAIL_PWD }}",
-            "time": "'"${{ steps.date.outputs.today }}"'",
-            "to_mail_ac": "${{ secrets.TO_MAIL_AC }}"
-          }'
+            "parameters": {
+              "mail_ac": "${{ secrets.MAIL_AC }}",
+              "email_pwd": "${{ secrets.EMAIL_PWD }}",
+              "time": "'"${{ steps.date.outputs.today }}"'",
+              "to_mail_ac": "${{ secrets.TO_MAIL_AC }}"
+            }
+          }')
+        
+        echo "=== 响应内容 ==="
+        echo "$response"
+        
+        http_code=$(echo "$response" | grep "HTTP_CODE" | cut -d: -f2)
+        echo "=== HTTP 状态码: $http_code ==="
+        
+        if [ "$http_code" = "200" ] || [ "$http_code" = "201" ]; then
+          echo "✅ API 调用成功"
+        else
+          echo "⚠️ API 返回状态码: $http_code"
+        fi
     
     - name: Show Success
       run: |
