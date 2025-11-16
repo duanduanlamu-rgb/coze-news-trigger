@@ -1,0 +1,39 @@
+name: Daily Coze News Trigger
+
+on:
+  schedule:
+    # 每天北京时间 8:00 触发
+    # 国内版用北京时间，不需要转换UTC
+    - cron: '0 8 * * *'
+  
+  # 允许手动运行（用于测试）
+  workflow_dispatch:
+
+jobs:
+  trigger-coze:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Get Current Date
+      id: date
+      run: |
+        echo "today=$(date +'%m月%d日')" >> $GITHUB_OUTPUT
+    
+    - name: Trigger Coze Workflow
+      run: |
+        curl -X POST 'https://api.coze.cn/v1/workflow/stream_run' \
+          -H 'Authorization: Bearer ${{ secrets.COZE_TOKEN }}' \
+          -H 'Content-Type: application/json' \
+          -d '{
+            "workflow_id": "7572968865026588722",
+            "parameters": {},
+            "mail_ac": "${{ secrets.MAIL_AC }}",
+            "email_pwd": "${{ secrets.EMAIL_PWD }}",
+            "time": "'"${{ steps.date.outputs.today }}"'",
+            "to_mail_ac": "${{ secrets.TO_MAIL_AC }}"
+          }'
+    
+    - name: Show Success
+      run: |
+        echo "✅ 扣子新闻工作流触发成功！"
+        echo "📅 日期: ${{ steps.date.outputs.today }}"
