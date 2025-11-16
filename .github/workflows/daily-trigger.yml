@@ -31,7 +31,7 @@ jobs:
             "workflow_id": "7572968865026588722",
             "parameters": {
               "mail_ac": "${{ secrets.MAIL_AC }}",
-              "email_pwd": "${{ secrets.EMAIL_PWD }}",
+              "mail_pw": "${{ secrets.EMAIL_PWD }}",
               "time": "'"${{ steps.date.outputs.today }}"'",
               "to_mail_ac": "${{ secrets.TO_MAIL_AC }}"
             }
